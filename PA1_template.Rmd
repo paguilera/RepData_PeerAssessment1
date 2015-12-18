@@ -7,7 +7,9 @@ output:
 
 
 ## Loading and preprocessing the data
-
+if(!file.exists("./activity.zip")){unzip("./activity.zip", overwrite = TRUE)}
+activity <- read.csv("activity.csv", stringsAsFactors = FALSE)
+activity$date <- as.Date(activity$date)
 
 
 ## What is mean total number of steps taken per day?
