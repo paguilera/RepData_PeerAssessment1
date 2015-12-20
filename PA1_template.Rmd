@@ -1,20 +1,40 @@
 ---
-title: "Reproducible Research: Peer Assessment 1"
-output: 
+title: 'Reproducible Research: Peer Assessment 1'
+output:
   html_document:
-    keep_md: true
+    keep_md: yes
+  pdf_document: default
 ---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(cache=TRUE)
+```
 
 
 ## Loading and preprocessing the data
+
+First, we check to see if the zip file is still there. If it is, we extract the contents of the zip file to make sure we are working from the original activity.csv file.
+
+```{r, echo=TRUE}
 if(!file.exists("./activity.zip")){unzip("./activity.zip", overwrite = TRUE)}
 activity <- read.csv("activity.csv", stringsAsFactors = FALSE)
-activity$date <- as.Date(activity$date)
-
+```
 
 ## What is mean total number of steps taken per day?
 
+The total number of steps per day is stored in our variable steps_per_day (Note: this is a little long as there are two months worth of data here):
 
+```{r, echo=TRUE}
+na.omit(aggregate(activity$steps, by=list(Date=activity$date), FUN=sum))
+```
+
+Creating a histogram to show the frequency of the total steps per day:
+
+```{r, echo=TRUE}
+steps_per_day <- na.omit(aggregate(activity$steps, by=list(Date=activity$date), FUN=sum))
+steps_per_day$Date <- as.Date(steps_per_day$Date)
+hist(steps_per_day$x,  main="Histogram for Steps per Day", xlab="Total Steps pre Day", ylab="Frequency of Total Steps", border="blue", col="gray")
+```
 
 ## What is the average daily activity pattern?
 
