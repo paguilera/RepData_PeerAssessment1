@@ -33,15 +33,91 @@ Creating a histogram to show the frequency of the total steps per day:
 ```{r, echo=TRUE}
 steps_per_day <- na.omit(aggregate(activity$steps, by=list(Date=activity$date), FUN=sum))
 steps_per_day$Date <- as.Date(steps_per_day$Date)
-hist(steps_per_day$x,  main="Histogram for Steps per Day", xlab="Total Steps pre Day", ylab="Frequency of Total Steps", border="blue", col="gray")
+hist(steps_per_day$x,  main="Histogram for Steps per Day", xlab="Total Steps per Day", ylab="Frequency of Total Steps", border="blue", col="gray")
+```
+
+And now for the mean and median steps per day:
+
+```{r, echo=TRUE}
+na.omit(aggregate(steps_per_day$x, by=list(Date=steps_per_day$Date), FUN=mean, na.rm = TRUE))
+na.omit(aggregate(steps_per_day$x, by=list(Date=steps_per_day$Date), FUN=median, na.rm = TRUE))
 ```
 
 ## What is the average daily activity pattern?
 
+First, let's see a plot of the daily steps along with an average of the steps per day:
 
+```{r, echo=TRUE}
+plot(steps_per_day, type = "l", ylab="Total Steps per Day")
+abline(h=mean(steps_per_day$x))
+```
+
+Next, let's calculate which 5 minute interval contains the maximum number of steps taken (during which 5 minute interval was the most walking seen?):
+
+```{r, echo=TRUE}
+na.omit(activity[activity$steps == max(activity$steps, na.rm = TRUE),])
+```
+
+From this result, we can see the time interval in question happened on 27 November at 6:15 AM.
 
 ## Imputing missing values
 
+Next we are counting the number of NA rows in our dataset.
 
+```{r, echo=TRUE}
+sum(is.na(activity$steps))
+```
+
+Based on the result, it looks like we have 2304 rows with missing data. Next we have to fill those missing data with the mean for those intervals and store the new resulting data in a new dataset.
+
+```{r, echo=TRUE}
+revised_activity <- activity
+revised_activity$date <- as.Date(revised_activity$date)
+uniques <- unique(revised_activity[c("steps", "interval")])
+uniques <- uniques[!is.na(uniques$steps),]
+
+na.steps <- which(is.na(revised_activity$steps))
+na.interval <- revised_activity$interval[na.steps]
+revised_activity[is.na(revised_activity$steps), "steps"] <- uniques$steps[match(na.interval, uniques$interval)]
+```
+
+And now let's make a histogram of this new dataset:
+
+```{r, echo=TRUE}
+revised_steps_per_day <- na.omit(aggregate(revised_activity$steps, by=list(Date=revised_activity$date), FUN=sum))
+revised_steps_per_day$Date <- as.Date(revised_steps_per_day$Date)
+hist(revised_steps_per_day$x,  main="Histogram for Revised Steps per Day", xlab="Total Steps per Day", ylab="Frequency of Total Steps", border="blue", col="gray")
+```
+
+Notice that the histogram is very different in the low end of step counts due to the changes we introduced by substituing the mean in for previously NA values.
+
+And the mean and median for this new dataset:
+
+```{r, echo=TRUE}
+na.omit(aggregate(revised_steps_per_day$x, by=list(Date=revised_steps_per_day$Date), FUN=mean, na.rm = TRUE))
+na.omit(aggregate(revised_steps_per_day$x, by=list(Date=revised_steps_per_day$Date), FUN=median, na.rm = TRUE))
+```
+
+As you can see, we definitely have more values being reported for the mean and median results. These are dates that were previously omitted since they had no values. This is causing some adjustment to our overall results.
 
 ## Are there differences in activity patterns between weekdays and weekends?
+
+Now we have to create a new column in our revised dataset indicating if the date falls on a weekday or a weekend.
+
+```{r, echo=TRUE}
+weekend_list = c("Saturday", "Sunday")
+revised_activity$day_type <- as.factor(ifelse(weekdays(revised_activity$date) %in% weekend_list, "weekend", "weekday"))
+```
+
+And now we use the modified dataset to create a time series plot averaged across weekday and weekend days:
+
+```{r, echo=TRUE}
+require(ggplot2)
+require(reshape2)
+steps_per_day_type <- na.omit(aggregate(revised_activity$steps, by=list(dayType=revised_activity$day_type, Interval=revised_activity$interval), FUN=mean))
+steps_per_day_type$Interval <- as.factor(steps_per_day_type$Interval)
+melted_by_type <- melt(steps_per_day_type)
+ggplot(melted_by_type, aes(x=Interval,y=value,colour=value, group=dayType)) +
+    facet_grid(dayType ~ .) +
+    geom_line()
+```
